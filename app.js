@@ -70,8 +70,8 @@ app.get('/user/edit', user.edit);
 app.post('/user/edit', user.doEdit);
 app.get('/user/delete', user.confirmDelete);
 app.post('/user/delete', user.doDelete);*/
-//app.get('/login', user.login);
-//app.post('/login', user.doLogin);
+app.get('/login', user.login);
+app.post('/login', user.doLogin);
 app.get('/logout', user.doLogout);
 /*
 // Project Routes
