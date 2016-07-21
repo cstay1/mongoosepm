@@ -87,7 +87,7 @@ exports.index = function(req, res){
 			title: req.session.user.name
 			,name: req.session.user.name
 			,email: req.session.user.email
-			,userId: req.session.user._id
+			,userID: req.session.user._id
 		});
 	} else {
 		res.redirect('/login');

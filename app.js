@@ -73,16 +73,16 @@ app.post('/user/delete', user.doDelete);*/
 app.get('/login', user.login);
 app.post('/login', user.doLogin);
 app.get('/logout', user.doLogout);
-/*
+
 // Project Routes
 app.get('/project/new',project.create);
 app.post('/project/new', project.doCreate);
 app.get('/project/:id', project.displayInfo);
-app.get('/project/edit/:id', project.edit);
-app.post('/project/edit/:id', project.doEdit);
-app.get('/project/delete/:id', project.confirmDelete);
-app.post('/project/delete/:id'. project.doDelete);
-*/
+//app.get('/project/edit/:id', project.edit);
+//app.post('/project/edit/:id', project.doEdit);
+//app.get('/project/delete/:id', project.confirmDelete);
+//app.post('/project/delete/:id'. project.doDelete);
+app.get('/project/byuser/:userid', project.byUser);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
