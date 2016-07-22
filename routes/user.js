@@ -1,12 +1,16 @@
 var mongoose = require('mongoose');
 var User = mongoose.model('User');
 
-var clearSession = function(req, res, callback){
+/*var clearSession = function(req, res, callback){
   req.session.user = {};
   req.session.loggedIn = "";
   callback();
-};
+};*/
 
+var clearSession = function(session, callback){
+	session.destroy();
+	callback();
+}
 
 // GET login page
 exports.login = function (req, res){
@@ -49,10 +53,11 @@ exports.doLogin = function (req, res){
 };
 
 
-// GET User createion form
+// GET User creation form
 exports.create = function(req, res){
 	res.render('user-form', {
 		title: 'Create user'
+		,_id: ""
 		,name: ""
 		,email: ""
 		,buttonText: "Join!"
@@ -141,6 +146,32 @@ var onEditSave = function (req, res, err, user) {
   }
 };
 
+// GET user delete confirmation form
+exports.confirmDelete = function(req, res){
+	res.render('user-delete-form', {
+		title: 'Delete account'
+		,_id: req.session.user._id
+		,name: req.session.user.name
+		,email: req.session.user.email
+	});
+}
+
+// POST user delete form
+exports.doDelete = function(req, res){
+	if(req.body._id){
+		User.findByIdAndRemove(req.body._id, function(err, user){
+			if(err){
+				console.log(err);
+				return res.redirect('/user?error=deleting')
+			}else{
+				console.log("User deleted:", user);
+				clearSession(req.session, function(){
+					res.redirect('/');
+				});
+			}
+		});
+	}
+}
 // GET logged in use page
 exports.index = function(req, res){
 	if(req.session.loggedIn === true){
@@ -157,7 +188,7 @@ exports.index = function(req, res){
 
 // GET user logout
 exports.doLogout = function(req, res) {
-  clearSession(req, res, function () {
-    res.redirect('/');
-  });
+clearSession(req.session, function(){
+		res.redirect('/');
+	});
 };
