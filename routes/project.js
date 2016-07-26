@@ -4,15 +4,29 @@ var Project = mongoose.model( 'Project' );
 
 // GET project creation form
 exports.create = function(req, res){
+  var strProjectName = ''
+      ,strTasks = ''
+      ,arrErrors = [];
   if (req.session.loggedIn === true){
+    if(req.session.tmpProject){
+      strProjectName = req.session.tmpProject.projectName;
+      strTasks = req.session.tmpProject.tasks;
+      req.session.tmpProject = '';
+    }
+    if(req.query){
+      if(req.query.projectName === 'invalid'){
+        arrErrors.push('Please enter a valid project name, minimum 5 chracters');
+      }
+    }
     res.render('project-form', {
       title: 'Create project',
       userid: req.session.user._id,
       userName: req.session.user.name,
       projectID: '',
-      projectName: '',
-      tasks: '',
+      projectName: strProjectName,
+      tasks: strTasks,
       buttonText: 'Make it so!'
+      ,errors: arrErrors
    });
   }else{
     res.redirect('/login');
@@ -27,9 +41,19 @@ exports.doCreate = function(req, res){
     createdOn : Date.now(),
     tasks : req.body.tasks
   }, function( err, project ){
+    var qString = '?';
     if(err){
       console.log(err);
-      res.redirect('/?error=project');
+      if(err.name === "ValidationError"){
+        for(var input in err.errors){
+          qString += input + '=invalid&';
+          console.log("Project create arror: " + err.errors[input].message);
+        }
+      } else{
+        res.redirect('/?error=true');
+      }
+      req.session.tmpProject = {"projectName" : req.body.projectName, "tasks" : req.body.tasks };
+      res.redirect('/project/new' + qString);
     }else{
       console.log("Project created and saved: " + project);
       console.log("project._id = " + project._id);
@@ -48,7 +72,7 @@ exports.displayInfo = function(req, res) {
       Project.findById( req.params.id, function(err,project) {
         if(err){
           console.log(err);
-          res.redirect('/user?404=project');
+          
         }else{
           console.log(project);
           res.render('project-page', {
@@ -68,23 +92,45 @@ exports.displayInfo = function(req, res) {
 
 // GET project edit form
 exports.edit = function(req, res){
+   var strProjectName = ''
+        ,strTasks = ''
+        ,arrErrors = [];
   if (req.session.loggedIn !== true){
     res.redirect('/login');
   }else{
     if (req.params.id) {
       Project.findById( req.params.id, function(err,project) {
+        if (err){
+          console.log(err);
+          res.redirect('/user?err=project404');
+        } else {
+          if (req.session.tmpProject){
+            strProjectName = req.session.tmpProject.projectName;
+            strTasks = req.session.tmpProject.tasks;
+            req.session.tmpProject = '';
+          } else {
+            strProjectName = project.projectName;
+            strTasks = project.tasks;
+          }
+          if(req.query){
+            if (req.query.projectName === 'invalid'){
+              arrErrors.push('Plaease enter a valid project name, minimum 5 characters');
+            }
+          }
+        }
         res.render('project-form', {
           title: 'Edit project',
           userid: req.session.user._id,
           userName: req.session.user.name,
           projectID: req.params.id,
-          projectName: project.projectName,
-          tasks: project.tasks,
+          projectName: strProjectName,
+          tasks: strTasks,
           buttonText: 'Make the change!'
+          ,errors: arrErrors
        });
       });
     }else{
-      res.redirect('/user');
+      res.redirect('/user?err=no-projectID');
     }
   }
 };
@@ -102,8 +148,19 @@ exports.doEdit = function(req, res) {
             project.tasks = req.body.tasks;
             project.modifiedOn = Date.now();
             project.save(function (err, project){
+              var qString = '?';
               if(err){
                 console.log(err);
+                if (err.name === "ValidationError"){
+                  for (var input in err.errors){
+                    qString += input + '=invalid&';
+                    console.log(err.errors[input].message);
+                  }
+                } else {
+                  res.redirect('/?error=true');
+                }
+                req.session.tmpProject = { "projectName" : req.body.projectName, "tasks" : req.body.tasks};
+                res.redirect('/project/edit/' + req.body.projectID + qString);
               } else {
                 console.log('Project updated: ' + req.body.projectName);
                 res.redirect( '/project/' + req.body.projectID );
