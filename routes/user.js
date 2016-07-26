@@ -52,15 +52,45 @@ exports.doLogin = function (req, res){
 	}
 };
 
+// GET logged in use page
+exports.index = function(req, res){
+	if(req.session.loggedIn === true){
+		res.render('user-page', {
+			title: req.session.user.name
+			,name: req.session.user.name
+			,email: req.session.user.email
+			,userID: req.session.user._id
+		});
+	} else {
+		res.redirect('/login');
+	}
+}
 
 // GET User creation form
 exports.create = function(req, res){
+	var strName = ""
+		,strEmail = ""
+		,arrErrors = [];
+
+	if(req.session.tmpUser){
+		strName = req.session.tmpUser.name;
+		strEmail = req.session.tmpUser.email;
+	}
+	if(req.query){
+		if(req.query.name === 'invalid'){
+			arrErrors.push('Please enter a valid name, minimum 5 characters');
+		}
+		if(req.query.email === 'invalid'){
+			arrErrors.push('Please enter a valid email address');
+		}
+	}
 	res.render('user-form', {
 		title: 'Create user'
 		,_id: ""
-		,name: ""
-		,email: ""
+		,name: strName
+		,email: strEmail
 		,buttonText: "Join!"
+		,errors: arrErrors
 	});
 };
 
@@ -72,38 +102,68 @@ exports.doCreate = function(req, res){
 		,modifiedOn: Date.now()
 		,lastLogin: Date.now()
 	}, function(err, user){
+		var qString = "";
 		if(err){
 			console.log("user : new user creation error: " +err);
 			if(err.code === 11000){
-				res.redirect('/user/new?exists=true');
+				qString = 'exists=true';
+			}else if(err.name === "ValidationError"){
+				for (var input in err.errors){
+					qString += input + '=invalid&';
+					console.log(err.errors[input].message);
+				}
 			}else{
-				res.redirect('?error=true');
+				res.redirect('/?error=true');
 			}
+			req.session.tmpUser = {"name" : req.body.FullName, "email" : req.body.Email};
+			res.redirect('/user/new?' + qString);
 		}else{
 			console.log("user : User created and saved: " + user);
+			req.session.tmpUser = '';
 			req.session.user = {
 				"name": user.name
 				,"email": user.email
 				,"_id": user._id
 			};
 			req.session.loggedIn = true;
-			res.redirect('/user/');
+			res.redirect('/user');
 		}
 	});
 };
 
 // GET user edit form
 exports.edit = function(req, res){
-	if(req.session.loggedIn !== true){
-		res.redirect('/login');
-	} else{
+	if(req.session.loggedIn){
+		var strName = ''
+			,strEmail = ''
+			,arrErrors = [];
+		if (req.session.tmpUser){
+			strName = req.session.tmpUser.name;
+			strEmail = req.session.tmpUser.email;
+			req.session.tmpUser = '';
+		} else {
+			strName = req.session.user.name;
+			strEmail = req.session.user.email;
+		}
+		if(req.query){
+			if (req.query.name === 'invalid'){
+				arrErrors.push('Please enter a valid name, minimum 5 characters');
+			}
+			if(req.query.email === 'invalid'){
+				arrErrors.push('Please enter a valid email address');
+			}
+		}
 		res.render('user-form',{
 			title: "Edit profile"
 			,_id: req.session.user._id
 			,name: req.session.user.name
 			,email: req.session.user.email
 			,buttonText: "Save"
+			,errors: arrErrors
 		});
+		
+	} else{
+		res.redirect('/login');
 	}
 }
 
@@ -137,7 +197,16 @@ var doEditSave = function(req, res, err, user) {
 var onEditSave = function (req, res, err, user) {
   if(err){
     console.log(err);
-    res.redirect( '/user?error=saving');
+    if (err.name === "ValidationError"){
+    	for(var input in err.errors){
+    		qString += input + '=invalid&';
+    		console.log(err.errors[input].message);
+    	}
+    } else{
+    	res.redirect('/?error=true');
+    }
+    req.session.tmpUser = {"name": req.body.FullName, "email" : req.body.Email};
+    res.redirect( '/user/edit?' + qString);
   } else {
     console.log('User updated: ' + req.body.FullName);
     req.session.user.name = req.body.FullName;
@@ -170,19 +239,6 @@ exports.doDelete = function(req, res){
 				});
 			}
 		});
-	}
-}
-// GET logged in use page
-exports.index = function(req, res){
-	if(req.session.loggedIn === true){
-		res.render('user-page', {
-			title: req.session.user.name
-			,name: req.session.user.name
-			,email: req.session.user.email
-			,userID: req.session.user._id
-		});
-	} else {
-		res.redirect('/login');
 	}
 }
 
